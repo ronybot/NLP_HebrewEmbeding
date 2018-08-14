@@ -327,3 +327,8 @@ print_joint_similarities(sport_words, "sport words")
 # Marina------------------
 get_joint_similarities(hebrew_color_words);
 #print_joint_similarities(randomly_chosen_words, "randomly chosen hebrew words", print_words=True)
+
+
+
+
+print "t"
