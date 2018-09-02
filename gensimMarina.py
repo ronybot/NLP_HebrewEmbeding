@@ -4,12 +4,20 @@ import numpy
 import itertools
 import random
 from gensim.models import FastText
-
-
-
 import matplotlib.pyplot as plot
 
 
+groupNamesArr =[]
+similarityGroupsYap = []
+varianceGroupsYap = []
+groupNamesArr = []
+similaritySumYap = 0
+varianceSumYap = 0
+similarityGroupSimpleHewiki = []
+varianceGroupsSimpleHewiki = []
+groupNamesArrSimpleHewiki = []
+similaritySumSimpleHewiki = 0
+varianceSumSimpleHewiki = 0
 
 {
 
@@ -205,18 +213,24 @@ import matplotlib.pyplot as plot
  "nbformat": 4,
  "nbformat_minor": 2
 }
-
+hebrew_disease_words = [
+      'צהבת',
+      'גחלת',
+     'שפעת',
+     'שעלת',
+     'אסטמה'
+    ]
 def getGroupExcelContents(filename): #this will load the first 2 columns from the first row until last one
     book = openpyxl.load_workbook(filename)
     activeSheet=book.active
-    cells = activeSheet['A1':'B5150']
+    cells = activeSheet['A1':'B5180']
     dicOfArrays={}
 
     for c1,c2 in cells: #c2 will be the values , c1 will be the headers
         curVal=c2.value
         curHeader=c1.value
         if (curVal is not None and curHeader is not None):
-            if len(curVal.split()) != 1:
+            if len(curVal.split()) == 1:
                 if (curHeader not in dicOfArrays):
                     dicOfArrays[curHeader]=[]
                 dicOfArrays[curHeader].append(curVal)
@@ -225,7 +239,7 @@ def getGroupExcelContents(filename): #this will load the first 2 columns from th
 def getLexiconFromExcel(filename): #this will load the first 2 columns from the first row until the 1216th one
     book = openpyxl.load_workbook(filename)
     activeSheet=book.active
-    cells = activeSheet['A1':'B5150']
+    cells = activeSheet['A1':'B5180']
     lexicon=[]
 
     for c1,c2 in cells: #c2 will be the values , c1 will be the headers
@@ -239,9 +253,10 @@ def getLexiconFromExcel(filename): #this will load the first 2 columns from the 
 
 
 
-word_embeddings_file = 'C:\\OpenUniv\\model.bin'
-word_embeddings_fileHewiki2017 = 'C:\\OpenUniv\\hewiki2017FastText.bin'
-
+#word_embeddings_file = 'C:\\OpenUniv\\model.bin'
+#word_embeddings_fileHewiki2017 = 'C:\\OpenUniv\\hewiki2017FastText.bin'
+word_embeddings_file = 'model.bin'
+word_embeddings_fileHewiki2017 = 'hewiki2017FastText.bin'
 def similarity_normalize(cosine_distance):
  return (cosine_distance+1)/2
 
@@ -258,14 +273,32 @@ def printHist( group_name, distances):
 def normalized_similarity(word1, word2, model):
  return similarity_normalize(model.wv.similarity(word1, word2))
 
+def cleanData():
+    global similarityGroupsYap
+    global varianceGroupsYap
+    global similaritySumYap
+    global similaritySumSimpleHewiki
+    global varianceSumSimpleHewiki
+    global varianceSumYap
+    global varianceGroupsSimpleHewiki
+    global groupNamesArr
+    global similarityGroupSimpleHewiki
+    global isYap
+    similarityGroupsYap = []
+    varianceGroupsYap = []
+    similaritySumYap =0
+    similaritySumSimpleHewiki =0
+    varianceSumSimpleHewiki=0
+    varianceSumYap=0
+    varianceGroupsSimpleHewiki= 0
+    similarityGroupSimpleHewiki = []
+    varianceGroupsSimpleHewiki = []
+    groupNamesArr = []
+    return groupNamesArr
+
 #init data
 
-similaritySumYap = 0
-varianceSumYap = 0
-similaritySumSimpleHewiki = 0
-varianceSumSimpleHewiki = 0
-isYap = True
-def get_joint_similarities(words, group_name, model, verbose=False):
+def get_joint_similarities(isYap, words, group_name, model, verbose=False):
  distances = []
  for pair in itertools.combinations(words, 2):
    distance = normalized_similarity(pair[0], pair[1], model)
@@ -273,41 +306,39 @@ def get_joint_similarities(words, group_name, model, verbose=False):
     print("Similarity according to loaded model: {0:.2f} {1} {2}".format(distance, pair[0], pair[1]))
    distances.append(distance)
  printHist( group_name, distances)
- meanVal=numpy.mean(distances)
- #check if it is not nan - is valid data
- global isYap
+
  global similaritySumSimpleHewiki
+ global similarityGroupSimpleHewiki
  global similaritySumYap
  global varianceSumYap
  global varianceSumSimpleHewiki
- meanVal = numpy.mean(distances)
+ global groupNamesArr
  varVal = numpy.var(distances)
- if(meanVal<100000):
-     if( varVal <100000):
-      groupNamesArr.append(group_name)
+ meanVal=numpy.mean(distances)
 
-      if(isYap):
+ if isYap:
+        groupNamesArr.append(group_name)
         similarityGroupsYap.append(meanVal)
         similaritySumYap += meanVal
-     else:
-         similarityGroupsSimpleHewiki.append(meanVal)
-         similaritySumSimpleHewiki += meanVal
+ else:
+     similarityGroupSimpleHewiki.append(meanVal)
+     similaritySumSimpleHewiki += meanVal
 
-     if(isYap):
-       varianceGroupsYap.append(varVal)
-       varianceSumYap += varVal
-     else:
+ if isYap:
+  varianceGroupsYap.append(varVal)
+  varianceSumYap += varVal
+ else:
        varianceGroupsSimpleHewiki.append(varVal)
        varianceSumSimpleHewiki += varVal
 
  return numpy.mean(distances), numpy.var(distances)
 
-def print_joint_similarities(words, group_name, model, print_words=False):
+def print_joint_similarities(isYap, words, group_name, model, print_words=False):
     print()
     print(group_name)
     if print_words:
         print(words)
-    tmpVar=get_joint_similarities(words, group_name, model)
+    tmpVar=get_joint_similarities(isYap, words, group_name, model)
     print(tmpVar)
     print()
     return tmpVar
@@ -331,24 +362,20 @@ def getRandomWords(num):
 def printAverages(name):
     res= ""
     res+= "Results " + name + " table and average values:\n"
-
     res+="Groups="+ str(groupNamesArr)
-
-    if isYap:
-      res += "\n Yap Similarity of groups=" + str(similarityGroupsYap)
-      res += "\nYap Variance of groups="+str(varianceGroupsYap)
-      print("Yap Similarity Total Sum " + str(similaritySumYap))
-      print("Yap Variance Total Sum " + str(varianceSumYap))
-      res+="\nAverage similarity for all groups in Yap =" + str(similaritySumYap/similarityGroupsYap.__len__())
-      res+="\nAverage mean for all groups in Yap =" + str(varianceSumYap/varianceGroupsYap.__len__())
-    else:
-       res += "\n Simple Hewiki Similarity of groups="
-       res += str(similarityGroupsSimpleHewiki)
-       res += "\nVariance of groups in Simple Hewiki="+str(varianceGroupsSimpleHewiki)
-       print(str(similaritySumSimpleHewiki))
-       print(str(varianceSumSimpleHewiki))
-       res += "\nAverage similarity for all groups in Simple Hewiki =" + str(similaritySumSimpleHewiki/similarityGroupsSimpleHewiki.__len__())
-       res += "\nAverage mean for all groups in Simple Hewiki =" + str(varianceSumSimpleHewiki/varianceGroupsSimpleHewiki.__len__())
+    res += "\n Yap Similarity of groups=" + str(similarityGroupsYap)
+    res += "\nYap Variance of groups="+str(varianceGroupsYap)
+    print("Yap Similarity Total Sum " + str(similaritySumYap))
+    print("Yap Variance Total Sum " + str(varianceSumYap))
+    res+="\nAverage similarity for all groups in Yap =" + str(similaritySumYap/similarityGroupsYap.__len__())
+    res+="\nAverage mean for all groups in Yap =" + str(varianceSumYap/varianceGroupsYap.__len__())
+    res += "\n Simple Hewiki Similarity of groups="
+    res += str(similarityGroupSimpleHewiki )
+    res += "\nVariance of groups in Simple Hewiki="+str(varianceGroupsSimpleHewiki)
+    print(str(similaritySumSimpleHewiki))
+    print(str(varianceSumSimpleHewiki))
+    res += "\nAverage similarity for all groups in Simple Hewiki =" + str(similaritySumSimpleHewiki/similarityGroupSimpleHewiki.__len__())
+    res += "\nAverage mean for all groups in Simple Hewiki =" + str(varianceSumSimpleHewiki/varianceGroupsSimpleHewiki.__len__())
 
     print(res)
     return res
@@ -360,115 +387,137 @@ def printAverages(name):
 
 modelYap = FastText.load_fasttext_format(word_embeddings_file) # add the path to the file, applicable to your environment
 modelHewiki2017 = FastText.load_fasttext_format(word_embeddings_fileHewiki2017) # add the path to the file, applicable to your environment
+get_joint_similarities(True, hebrew_disease_words, "hebrew_disease_words", modelYap)
+# AG data
 
-pairWeek1 =['שבוע',
-          'שעה']
-
-pairWeek2 =['שבוע',
-         'שנה']
-
-pairWeek3 =['שבוע',
-         'דקה']
-
-pairWeek4 =['שבוע',
-         'חודש']
-
-#pairWeekDistractors1 =[ 'שבוע',
-#          'סוף']
-
+pairWeek1 =['שבוע', 'שעה']
+pairWeek2 =['שבוע','שנה']
+pairWeek3 =['שבוע',  'דקה']
+pairWeek4 =['שבוע',  'חודש']
 pairWeekRandom =['שבוע',  'פרח']
 
-similarityGroupsYap = []
-varianceGroupsYap = []
-similaritySumYap =0
-similaritySumSimpleHewiki =0
-varianceSumSimpleHewiki=0
-varianceSumYap=0;
+pairCucumber1 =['מלפפון', 'גזר']
+pairCucumber2 =['מלפפון','עגבנייה']
+pairCucumber3 =['מלפפון',  'כרוב']
+pairCucumber4 =['מלפפון',  'בצל']
+pairCucumberRandom =['מלפפון',  'עין']
 
-similarityGroupsSimpleHewiki = []
-varianceGroupsSimpleHewiki = []
-groupNamesArr = []
+pairSong1 =['שיר', 'סיפור']
+pairSong2 =['שיר','מאמר']
+pairSong3 =['שיר',  'מכתב']
+pairSong4 =['שיר',  'מודעה']
+pairSongRandom =['שיר',  'מטר']
 
+pairGold1 =['זהב', 'נחושת']
+pairGold2 =['זהב','כסף']
+pairGold3 =['זהב',  'ברזל']
+pairGold4 =['זהב',  'אלומיניום']
+pairGoldRandom =['זהב',  'כתיבה']
+
+pairPot1 =['סיר', 'צלחת']
+pairPot2 =['סיר','כף']
+pairPot3 =['סיר',  'כוס']
+pairPot4 =['סיר',  'מחבת']
+pairPotRandom =['סיר',  'מייל']
+
+pairWindow1 =['חלון', 'קיר']
+pairWindow2 =['חלון','גג']
+pairWindow3 =['חלון',  'דלת']
+pairWindow4 =['חלון',  'רצפה']
+pairWindowRandom =['חלון',  'מצרים']
 allResults = ""
-allResults+=str(print_joint_similarities(pairWeek1,"pairWeek1 Yap", modelYap ))
-allResults+=str(print_joint_similarities(pairWeek1,"pairWeek1 Hewiki", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True, pairCucumber1,"pairCucumber1 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False, pairCucumber1,"pairCucumber1 Hewiki", modelHewiki2017 ))
 
-allResults+=str(print_joint_similarities(pairWeek2,"pairWeek2 Yap", modelYap ))
-allResults+=str(print_joint_similarities(pairWeek2,"pairWeek2 Hewiki", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True,pairCucumber2,"pairCucumber2 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairCucumber2,"pairCucumber2 Hewiki", modelHewiki2017 ))
 
-allResults+=str(print_joint_similarities(pairWeek3,"pairWeek3 Yap", modelYap ))
-allResults+=str(print_joint_similarities(pairWeek3,"pairWeek3 Hewiki", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True,pairCucumber3,"pairCucumber3 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairCucumber3,"pairCucumber3 Hewiki", modelHewiki2017 ))
 
-allResults+=str(print_joint_similarities(pairWeek4,"pairWeek4 Yap", modelYap ))
-allResults+=str(print_joint_similarities(pairWeek4,"pairWeek4 Hewiki", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True,pairCucumber4,"pairCucumber4 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairCucumber4,"pairCucumber4 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True, pairSong1,"pairSong1 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False, pairSong1,"pairSong1 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairSong2,"pairSong2 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairSong2,"pairSong2 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairSong3,"pairSong3 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairSong3,"pairSong3 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairSong4,"pairSong4 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairSong4,"pairSong4 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True, pairPot1,"pairPt1 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False, pairPot1,"pairPt1 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairPot2,"pairPt2 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairPot2,"pairPt2 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairPot3,"pairPt3 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairPot3,"pairPt3 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairPot4,"pairPt4 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairPot4,"pairPt4 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True, pairWindow1,"pairWindow1 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False, pairWindow1,"pairWindow1 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairWindow2,"pairWindow2 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairWindow2,"pairWindow2 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairWindow3,"pairWindow3 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairWindow3,"pairWindow3 Hewiki", modelHewiki2017 ))
+
+allResults+=str(print_joint_similarities(True,pairWindow4,"pairWindow4 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairWindow4,"pairWindow4 Hewiki", modelHewiki2017 ))
 
 #allResults+=str(print_joint_similarities(pairWeekDistractors1,"pairWeekDistractors1 Yap", modelYap ))
 #allResults+=str(print_joint_similarities(pairWeekDistractors1,"pairWeekDistractors1 Hewiki", modelHewiki2017 ))
 
-allResults+=str(print_joint_similarities(pairWeekRandom,"pairWeekRandom1 Yap", modelYap ))
-allResults+=str(print_joint_similarities(pairWeekRandom,"pairWeekRandom1 Hewiki", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True,pairWeekRandom,"pairWeekRandom1 Yap", modelYap ))
+allResults+=str(print_joint_similarities(False,pairWeekRandom,"pairWeekRandom1 Hewiki", modelHewiki2017 ))
 print(allResults)
 
 
-
-randomly_chosen_words100 = getRandomWords(100)
-randomly_chosen_words200 = getRandomWords(200)
-randomly_chosen_words300 = getRandomWords(300)
-randomly_chosen_words500 = getRandomWords(500)
-randomly_chosen_words1000 = getRandomWords(1000)
-print("random words similarity score report")
-print(randomly_chosen_words100)
-allResults += "random words  similarity score report\n"
-allResults += str(randomly_chosen_words100)
-
-modelYap = FastText.load_fasttext_format(word_embeddings_file) # add the path to the file, applicable to your environment
-modelHewiki2017 = FastText.load_fasttext_format(word_embeddings_fileHewiki2017) # add the path to the file, applicable to your environment
-
-#Second analysys
-
-#hebModel = gensim.models.Word2Vec.load_word2vec_format("model.vec", binary=False)
-
-
-#hebModel=modelYap
-#secondAnalysisRes= e.get_score(hebModel, lambda comp: comp.set_name == 'nn', print_oov=False)
-#print("yap goldberg model results")
-#print(secondAnalysisRes)
-
-allResults+=str(print_joint_similarities(randomly_chosen_words100,"yap_random_100_words", modelYap ))
-allResults+=str(print_joint_similarities(randomly_chosen_words100,"simple_hewiki_2017_random_100words", modelHewiki2017 ))
-allResults+=str(print_joint_similarities(randomly_chosen_words200,"yap_random_200_words", modelYap ))
-allResults+=str(print_joint_similarities(randomly_chosen_words200,"simple_hewiki_2017_random_200words", modelHewiki2017 ))
-allResults+=str(print_joint_similarities(randomly_chosen_words300,"yap_random_300_words", modelYap ))
-allResults+=str(print_joint_similarities(randomly_chosen_words300,"simple_hewiki_2017_random_300words", modelHewiki2017 ))
-allResults+=str(print_joint_similarities(randomly_chosen_words500,"yap_random_500_words", modelYap ))
-allResults+=str(print_joint_similarities(randomly_chosen_words500,"simple_hewiki_2017_random_500words", modelHewiki2017 ))
-allResults+=str(print_joint_similarities(randomly_chosen_words1000,"yap_random_1000_words", modelYap ))
-allResults+=str(print_joint_similarities(randomly_chosen_words1000,"simple_hewiki_2017_random_1000words", modelHewiki2017 ))
-allResults+=str(printAverages("random words"))
-
-similarityGroupsYap = []
-varianceGroupsYap = []
-groupNamesArr = []
-similaritySumYap = 0
-varianceSumYap = 0
-similarityGroupsSimpleHewiki = []
-varianceGroupsSimpleHewiki = []
-groupNamesArrSimpleHewiki = []
-similaritySumSimpleHewiki = 0
-varianceSumSimpleHewiki = 0
-
+cleanData()
 print("a kind of cluster similarity score report")
 print("-----------------------------------------\n")
 
 curDict=getGroupExcelContents("dataResult.xlsx")
 for key in curDict.keys():
-    print(str(curDict[key]))
-    allResults += "yap_"+str(key)+"\n"+str(print_joint_similarities(curDict[key],"yap_"+str(key), modelYap, True))
-    allResults += "simple_hewiki_2017_"+str(key)+"\n"+str(print_joint_similarities(curDict[key],"simple_hewiki_2017_"+str(key),
+
+    allResults += "yap_"+str(key)+"\n"+str(print_joint_similarities(True, curDict[key],"yap_"+str(key), modelYap, True))
+    allResults += "simple_hewiki_2017_"+str(key)+"\n"+str(print_joint_similarities(False, curDict[key],"simple_hewiki_2017_"+str(key),
                                                                                  modelHewiki2017, True))
 f=open("eval/resultsSimilarGroups.txt", "w+")
 
-allResults += str(printAverages("Words from similar groups"))
+allResults += str(printAverages("Averages for words from similar groups"))
+
+cleanData()
+
+
+randomly_chosen_words200 = getRandomWords(200)
+randomly_chosen_words300 = getRandomWords(300)
+randomly_chosen_words500 = getRandomWords(500)
+randomly_chosen_words1000 = getRandomWords(1000)
+print("random words similarity score report")
+
+allResults += "random words  similarity score report\n"
+
+
+allResults+=str(print_joint_similarities(True, randomly_chosen_words200,"yap_random_200_words", modelYap ))
+allResults+=str(print_joint_similarities(False, randomly_chosen_words200,"simple_hewiki_2017_random_200words", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True, randomly_chosen_words300,"yap_random_300_words", modelYap ))
+allResults+=str(print_joint_similarities(False, randomly_chosen_words300,"simple_hewiki_2017_random_300words", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True, randomly_chosen_words500,"yap_random_500_words", modelYap ))
+allResults+=str(print_joint_similarities(False, randomly_chosen_words500,"simple_hewiki_2017_random_500words", modelHewiki2017 ))
+allResults+=str(print_joint_similarities(True, randomly_chosen_words1000,"yap_random_1000_words", modelYap ))
+allResults+=str(print_joint_similarities(False, randomly_chosen_words1000,"simple_hewiki_2017_random_1000words", modelHewiki2017 ))
+
+allResults+=str(printAverages("\nRandom words averages"))
 
 f.write(allResults)
 f.close()
