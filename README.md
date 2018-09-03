@@ -18,7 +18,7 @@ gensim.py
 
 The code in gensim.py loads a gensim word2vec Yap model and simple model without Yap and runs evaluation on the different datasets.
 Notice that the models it uses (model.vec and simpleHewiki2017.bin) covers hebrew wikipedia from 2017 July.
-
+For access to all results you have use our Azure cloud Linux server. Please call to Rony or Marina.
 
 The provided dataset
 
