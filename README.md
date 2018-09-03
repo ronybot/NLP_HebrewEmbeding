@@ -2,6 +2,7 @@ Yap word2vec model comparison to  Simple wiki word2vec model
 Yap model evaluation compares result of fasttext model created on basis of yap morphological preprocessing of Hebrew wikipedia 
 versus  fasttext model created without yap morphological preprocessing on same input corpus(Hebrew wikipedia).
 
+##נננ
 
 Here we provide:
 
